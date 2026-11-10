@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Image thumbnail preview in the detail panel for file formats Qt can
   decode (PNG, JPEG, BMP, GIF, ...), loaded and downscaled on a background
   thread.
+- Favorite folders: a small panel above the folder tree for one-click
+  access to frequently used locations, persisted between sessions.
+  Add via right-click on a folder in the tree or File → Add Current
+  Folder to Favorites; remove via right-click in the Favorites panel.
 
 ## [0.2.0] - 2026-10-27
 

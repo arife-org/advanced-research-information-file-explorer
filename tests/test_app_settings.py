@@ -74,6 +74,26 @@ def test_disabled_plugin_ids_handles_single_item(isolated_qsettings):
     assert settings.disabled_plugin_ids() == ["pdf_research"]
 
 
+def test_favorite_folders_round_trips_a_list(isolated_qsettings, tmp_path):
+    from arife.gui.settings import AppSettings
+
+    settings = AppSettings(isolated_qsettings)
+    assert settings.favorite_folders() == []
+
+    folders = [tmp_path / "a", tmp_path / "b"]
+    settings.set_favorite_folders(folders)
+    assert settings.favorite_folders() == folders
+
+
+def test_favorite_folders_handles_single_item(isolated_qsettings, tmp_path):
+    from arife.gui.settings import AppSettings
+
+    settings = AppSettings(isolated_qsettings)
+    settings.set_favorite_folders([tmp_path / "only"])
+
+    assert settings.favorite_folders() == [tmp_path / "only"]
+
+
 def test_window_geometry_round_trips(isolated_qsettings):
     from PySide6.QtCore import QByteArray
 

@@ -34,6 +34,9 @@ your research throws at it.
   detail panel for whatever you select.
 - Back / Forward navigation history (Alt+Left / Alt+Right) and Go Up
   (Alt+Up), the way you'd expect from any file manager.
+- Favorite folders panel above the tree for one-click access to the
+  locations you use most, persisted between sessions. Right-click a
+  folder in the tree to add it; right-click a favorite to remove it.
 - Recursive subfolder scanning with an "Include subfolders" toggle and a
   "Location" column showing each result's path relative to the current
   folder.

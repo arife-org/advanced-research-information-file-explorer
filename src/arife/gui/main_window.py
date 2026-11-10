@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -88,8 +90,16 @@ class MainWindow(QMainWindow):
     # -- UI construction ----------------------------------------------------------------
     def _build_ui(self) -> None:
         self._tree_view = self._build_tree_view()
+        self._favorites_list = self._build_favorites_list()
+        self._refresh_favorites_list()
         self._search_box, self._recursive_checkbox, search_row = self._build_search_row()
         self._table_model, self._table_view = self._build_table_view()
+
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(self._favorites_list)
+        left_layout.addWidget(self._tree_view, stretch=1)
 
         middle_widget = QWidget()
         middle_layout = QVBoxLayout(middle_widget)
@@ -101,7 +111,7 @@ class MainWindow(QMainWindow):
         self._detail_panel.hash_requested.connect(self._on_hash_requested)
 
         splitter = QSplitter()
-        splitter.addWidget(self._tree_view)
+        splitter.addWidget(left_widget)
         splitter.addWidget(middle_widget)
         splitter.addWidget(self._detail_panel)
         splitter.setStretchFactor(0, 1)
@@ -122,7 +132,17 @@ class MainWindow(QMainWindow):
         for col in (1, 2, 3):
             tree_view.hideColumn(col)
         tree_view.clicked.connect(self._on_tree_clicked)
+        tree_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        tree_view.customContextMenuRequested.connect(self._on_tree_context_menu)
         return tree_view
+
+    def _build_favorites_list(self) -> QListWidget:
+        favorites_list = QListWidget()
+        favorites_list.setMaximumHeight(140)
+        favorites_list.itemDoubleClicked.connect(self._on_favorite_double_clicked)
+        favorites_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        favorites_list.customContextMenuRequested.connect(self._on_favorite_context_menu)
+        return favorites_list
 
     def _build_search_row(self) -> tuple[QLineEdit, QCheckBox, QHBoxLayout]:
         search_box = QLineEdit()
@@ -181,6 +201,10 @@ class MainWindow(QMainWindow):
         self._forward_action.setEnabled(False)
         self._forward_action.triggered.connect(self._go_forward)
         file_menu.addAction(self._forward_action)
+
+        add_favorite_action = QAction("Add Current Folder to &Favorites", self)
+        add_favorite_action.triggered.connect(lambda: self._add_favorite(self._current_root))
+        file_menu.addAction(add_favorite_action)
 
         new_folder_action = QAction("&New Folder…", self)
         new_folder_action.setShortcut("Ctrl+Shift+N")
@@ -350,6 +374,54 @@ class MainWindow(QMainWindow):
     def _on_tree_clicked(self, index) -> None:
         path = self._dir_model.filePath(index)
         self._navigate_to(Path(path))
+
+    def _on_tree_context_menu(self, position: QPoint) -> None:
+        index = self._tree_view.indexAt(position)
+        if not index.isValid():
+            return
+
+        path = Path(self._dir_model.filePath(index))
+        menu = QMenu(self)
+        add_action = menu.addAction("Add to Favorites")
+        if menu.exec(self._tree_view.viewport().mapToGlobal(position)) is add_action:
+            self._add_favorite(path)
+
+    def _refresh_favorites_list(self) -> None:
+        self._favorites_list.clear()
+        for path in self._app_settings.favorite_folders():
+            item = QListWidgetItem(path.name or str(path))
+            item.setToolTip(str(path))
+            item.setData(Qt.ItemDataRole.UserRole, path)
+            self._favorites_list.addItem(item)
+
+    def _add_favorite(self, path: Path) -> None:
+        favorites = self._app_settings.favorite_folders()
+        if path not in favorites:
+            favorites.append(path)
+            self._app_settings.set_favorite_folders(favorites)
+            self._refresh_favorites_list()
+
+    def _remove_favorite(self, path: Path) -> None:
+        favorites = [p for p in self._app_settings.favorite_folders() if p != path]
+        self._app_settings.set_favorite_folders(favorites)
+        self._refresh_favorites_list()
+
+    def _on_favorite_double_clicked(self, item: QListWidgetItem) -> None:
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if not path.is_dir():
+            QMessageBox.warning(self, "Folder not found", f'"{path}" no longer exists.')
+            return
+        self._navigate_to(path)
+
+    def _on_favorite_context_menu(self, position: QPoint) -> None:
+        item = self._favorites_list.itemAt(position)
+        if item is None:
+            return
+
+        menu = QMenu(self)
+        remove_action = menu.addAction("Remove from Favorites")
+        if menu.exec(self._favorites_list.viewport().mapToGlobal(position)) is remove_action:
+            self._remove_favorite(item.data(Qt.ItemDataRole.UserRole))
 
     def _open_entry(self, entry) -> None:
         if entry.is_dir:

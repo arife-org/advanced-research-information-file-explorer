@@ -14,6 +14,7 @@ _LAST_FOLDER_KEY = "last_folder"
 _RECURSIVE_SCAN_KEY = "recursive_scan"
 _DISABLED_PLUGINS_KEY = "disabled_plugins"
 _WINDOW_GEOMETRY_KEY = "window_geometry"
+_FAVORITE_FOLDERS_KEY = "favorite_folders"
 
 
 class AppSettings:
@@ -44,6 +45,15 @@ class AppSettings:
 
     def set_disabled_plugin_ids(self, ids: list[str]) -> None:
         self._settings.setValue(_DISABLED_PLUGINS_KEY, ids)
+
+    def favorite_folders(self) -> list[Path]:
+        saved = self._settings.value(_FAVORITE_FOLDERS_KEY, [])
+        if isinstance(saved, str):  # QSettings collapses a one-item list to a bare string
+            saved = [saved]
+        return [Path(p) for p in saved]
+
+    def set_favorite_folders(self, paths: list[Path]) -> None:
+        self._settings.setValue(_FAVORITE_FOLDERS_KEY, [str(p) for p in paths])
 
     def window_geometry(self) -> QByteArray:
         return self._settings.value(_WINDOW_GEOMETRY_KEY, QByteArray())
